@@ -10,10 +10,10 @@
 package XML::NamespaceSupport;
 use strict;
 
-use vars qw($VERSION);
-$VERSION = '1.02';
-use constant NS_XMLNS   => 'http://www.w3.org/2000/xmlns/';
-use constant NS_XML     => 'http://www.w3.org/XML/1998/namespace';
+use vars qw($VERSION $NS_XMLNS $NS_XML);
+$VERSION    = '1.03';
+$NS_XMLNS   = 'http://www.w3.org/2000/xmlns/';
+$NS_XML     = 'http://www.w3.org/XML/1998/namespace';
 
 
 # add the ns stuff that baud wants based on Java's xml-writer
@@ -29,11 +29,11 @@ sub new {
                 fatals  => 1,
                 nsmap   => [{
                               default       => undef,
-                              prefix_map    => { xml => NS_XML },
+                              prefix_map    => { xml => $NS_XML },
                               declarations  => undef,
                            }]
                };
-    $self->{nsmap}->[0]->{prefix_map}->{xmlns} = NS_XMLNS if $options->{xmlns};
+    $self->{nsmap}->[0]->{prefix_map}->{xmlns} = $NS_XMLNS if $options->{xmlns};
     $self->{fatals} = $options->{fatal_errors} if defined $options->{fatal_errors};
     $self->{unknown_prefix} = 'aaa';
     return bless $self, $class;
@@ -80,6 +80,7 @@ sub declare_prefix {
     my $prefix  = shift;
     my $value   = shift;
 
+    warn "Prefix must not be undef in declare_prefix(). The emtpy prefix must be ''" unless defined $prefix;
     return 0 if $prefix =~ /^xml/i;
 
     if ($prefix eq '') {
@@ -153,6 +154,8 @@ sub get_declared_prefixes {
 sub get_uri {
     my $self    = shift;
     my $prefix  = shift;
+
+    warn "Prefix must not be undef in get_uri(). The emtpy prefix must be ''" unless defined $prefix;
 
     return $self->{nsmap}->[-1]->{default} if $prefix eq '';
     return $self->{nsmap}->[-1]->{prefix_map}->{$prefix} if exists $self->{nsmap}->[-1]->{prefix_map}->{$prefix};
@@ -469,6 +472,24 @@ interchangeably. Here is the mapping:
   processName               process_name
   processElementName        process_element_name
   processAttributeName      process_attribute_name
+
+=head1 VARIABLES
+
+Two global variables are made available to you. They used to be constants but
+simple scalars are easier to use in a number of contexts. They are not
+exported but can easily be accessed from any package, or copied into it.
+
+=over 4
+
+=item * C<$NS_XMLNS>
+
+The namespace for xmlns prefixes, http://www.w3.org/2000/xmlns/.
+
+=item * C<$NS_XML>
+
+The namespace for xml prefixes, http://www.w3.org/XML/1998/namespace.
+
+=back
 
 =head1 TODO
 

@@ -1,6 +1,13 @@
 
 Revision history for XML::NamespaceSupport:
 
+1.03  wed 20020123 19:04:90
+    - a few warnings were confusing people when they wrongly used undef
+    prefixes. The warning has now been made explicit (as it reveals a
+    problem in the calling code).
+    - turned the namespace constants into variables so that it is easier
+    to use them from outside.
+
 1.02  thu 20011129 19:04:38
 	- misc fixes in the docs
 	- removed the uri_unknown_prefix option as it wasn't what Matt
