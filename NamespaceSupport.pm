@@ -2,6 +2,9 @@
 ###
 # XML::NamespaceSupport - a simple generic namespace processor
 # Robin Berjon <robin@knowscape.com>
+# 07/10/2001 - v0.03 added Clarkian notation parsing
+# 20/09/2001 - v0.02 (w/ lots from Duncan Cameron)
+# 16/09/2001 - v0.01
 ###
 
 package XML::NamespaceSupport;
@@ -15,7 +18,7 @@ use constant PREFIX_MAP     => 1;
 use constant DECLARATIONS   => 2;
 
 use vars qw($VERSION $NS_XMLNS $NS_XML);
-$VERSION    = '1.06';
+$VERSION    = '1.05';
 $NS_XMLNS   = 'http://www.w3.org/2000/xmlns/';
 $NS_XML     = 'http://www.w3.org/XML/1998/namespace';
 
