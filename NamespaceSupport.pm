@@ -10,7 +10,7 @@ package XML::NamespaceSupport;
 use strict;
 
 use vars qw($VERSION);
-$VERSION = '0.02';
+$VERSION = '0.03';
 use constant NS_XMLNS   => 'http://www.w3.org/2000/xmlns/';
 use constant NS_XML     => 'http://www.w3.org/XML/1998/namespace';
 
@@ -247,6 +247,17 @@ sub _get_ns_details {
 }
 #-------------------------------------------------------------------#
 
+#-------------------------------------------------------------------#
+# parse_jclark_notation() - parse the Clarkian notation
+#-------------------------------------------------------------------#
+sub parse_jclark_notation {
+    shift;
+    my $jc = shift;
+    $jc =~ m/^\{(.*)\}([^}]+)$/;
+    return $1, $2;
+}
+#-------------------------------------------------------------------#
+
 
 #-------------------------------------------------------------------#
 # Java names mapping
@@ -262,6 +273,7 @@ sub _get_ns_details {
 *XML::NamespaceSupport::processName          = \&process_name;
 *XML::NamespaceSupport::processElementName   = \&process_element_name;
 *XML::NamespaceSupport::processAttributeName = \&process_attribute_name;
+*XML::NamespaceSupport::parseJClarkNotation  = \&parse_jclark_notation;
 #-------------------------------------------------------------------#
 
 
@@ -311,6 +323,12 @@ XML::NamespaceSupport - a simple generic namespace support class
 
   # reset the object for reuse in another document
   $nsup->reset;
+
+  # a simple helper to process Clarkian Notation
+  my ($ns, $lname) = $nsup->parse_jclark_notation('{http://foo}bar');
+  # or (given that it doesn't care about the object
+  my ($ns, $lname) = XML::NamespaceSupport->parse_jclark_notation('{http://foo}bar');
+
 
 =head1 DESCRIPTION
 
@@ -439,7 +457,6 @@ interchangeably. Here is the mapping:
 
  - add more tests
  - optimise here and there
- - add a helper to process the jclark notation as well
 
 =head1 AUTHOR
 
