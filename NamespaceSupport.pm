@@ -11,10 +11,12 @@ package XML::NamespaceSupport;
 use strict;
 
 use vars qw($VERSION);
-$VERSION = '1.00';
+$VERSION = '1.02';
 use constant NS_XMLNS   => 'http://www.w3.org/2000/xmlns/';
 use constant NS_XML     => 'http://www.w3.org/XML/1998/namespace';
 
+
+# add the ns stuff that baud wants based on Java's xml-writer
 
 
 #-------------------------------------------------------------------#
@@ -33,7 +35,7 @@ sub new {
                };
     $self->{nsmap}->[0]->{prefix_map}->{xmlns} = NS_XMLNS if $options->{xmlns};
     $self->{fatals} = $options->{fatal_errors} if defined $options->{fatal_errors};
-    $self->{unknown_prefix} = 'aaa' if $options->{uri_unknown_prefix};
+    $self->{unknown_prefix} = 'aaa';
     return bless $self, $class;
 }
 #-------------------------------------------------------------------#
@@ -85,6 +87,12 @@ sub declare_prefix {
     }
     else {
         die "Cannot undeclare prefix $prefix" if $value eq '';
+        if (not defined $prefix) {
+            while (1) {
+                $prefix = $self->{unknown_prefix}++;
+                last if not exists $self->{nsmap}->[-1]->{prefix_map}->{$prefix};
+            }
+        }
         $self->{nsmap}->[-1]->{prefix_map}->{$prefix} = $value;
     }
     push @{$self->{nsmap}->[-1]->{declarations}}, $prefix;
@@ -148,7 +156,7 @@ sub get_uri {
 
     return $self->{nsmap}->[-1]->{default} if $prefix eq '';
     return $self->{nsmap}->[-1]->{prefix_map}->{$prefix} if exists $self->{nsmap}->[-1]->{prefix_map}->{$prefix};
-    return $self->{unknown_prefix} ? $self->{unknown_prefix}++ : undef;
+    return undef;
 }
 #-------------------------------------------------------------------#
 
@@ -351,7 +359,7 @@ It adds a few perlisations where we thought it appropriate.
 
 A simple constructor.
 
-The options are C<xmlns>, C<fatal_errors>, and C<uri_unknown_prefix>.
+The options are C<xmlns> and C<fatal_errors>.
 
 If C<xmlns> is turned on (it is off by default) the mapping from the
 xmlns prefix to the URI defined for it in DOM level 2 is added to the
@@ -361,10 +369,6 @@ prefix mapping).
 If C<fatal_errors> is turned off (it is on by default) a number of
 validity errors will simply be flagged as failures, instead of
 die()ing.
-
-If C<uri_unknown_prefix> is tuned on (it is off by default) then
-get_uri will return a specific string for unknown prefixes, instead
-of undef.
 
 =item * $nsup->push_context
 
@@ -378,7 +382,13 @@ one. It will die() if you try to pop more than you have pushed.
 
 =item * $nsup->declare_prefix($prefix, $uri)
 
-Declares a mapping of $prefix to $uri, at the current level.
+Declares a mapping of $prefix to $uri, at the current level. Note that
+if you declare a prefix mapping in which $prefix is undef(), you will
+get an automatic prefix selected for you. This is useful when you deal
+with code that hasn't kept prefixes around and need to reserialize the
+nodes. It also means that if you want to set the default namespace (ie
+with an empty prefix) you must use the empty string instead of undef.
+This behaviour is consistent with the SAX 2.0 specification.
 
 =item * $nsup->declare_prefixes(%prefixes2uris)
 

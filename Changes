@@ -1,6 +1,16 @@
 
 Revision history for XML::NamespaceSupport:
 
+1.02  thu 20011129 19:04:38
+	- misc fixes in the docs
+	- removed the uri_unknown_prefix option as it wasn't what Matt
+	thought it patched (it did seem strange, but then I've seen
+	stranger feature requests ;-)
+	- added the automatic generation of prefixes when they are set
+	to undef. Be warned that it's a potentially dangerous behaviour
+	if you mix undef and the empty string. However this is compliant
+	with SAX2 and PerlDOM.
+
 0.02 - 1.00  wed 20011128 23:37:41
 	- misc fixes in the docs and parts of the code
 	- added the uri_unknown_prefix option (Matt Sergeant)
