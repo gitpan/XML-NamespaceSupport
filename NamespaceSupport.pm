@@ -15,7 +15,7 @@ use constant PREFIX_MAP     => 1;
 use constant DECLARATIONS   => 2;
 
 use vars qw($VERSION $NS_XMLNS $NS_XML);
-$VERSION    = '1.07';
+$VERSION    = '1.08';
 $NS_XMLNS   = 'http://www.w3.org/2000/xmlns/';
 $NS_XML     = 'http://www.w3.org/XML/1998/namespace';
 
@@ -93,6 +93,15 @@ sub declare_prefix {
     to a true value.
     EOWARN
 
+    if ($prefix eq 'xml' and $value ne $NS_XML) {
+        die "The xml prefix can only be bound to the $NS_XML namespace."
+    }
+    elsif ($value eq $NS_XML and $prefix ne 'xml') {
+        die "the $NS_XML namespace can only be bound to the xml prefix.";
+    }
+    elsif ($value eq $NS_XML and $prefix eq 'xml') {
+        return 1;
+    }
     return 0 if index(lc($prefix), 'xml') == 0;
 
     if (defined $prefix and $prefix eq '') {
@@ -473,8 +482,8 @@ C<fatal_errors>.
 =item * $nsup->undeclare_prefix($prefix);
 
 Removes a namespace prefix from the current context. This function may
-be used in SAX's end_prefix_mapping when there is fear that a namespace 
-declaration might be available outside their scope (which shouldn't 
+be used in SAX's end_prefix_mapping when there is fear that a namespace
+declaration might be available outside their scope (which shouldn't
 normally happen, but you never know ;). This may be needed in order to
 properly support Namespace 1.1.
 
@@ -553,9 +562,9 @@ list.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 Robin Berjon. All rights reserved. This program is
-free software; you can redistribute it and/or modify it under the same
-terms as Perl itself.
+Copyright (c) 2001-2002 Robin Berjon. All rights reserved. This program is
+free software; you can redistribute it and/or modify it under the same terms
+as Perl itself.
 
 =head1 SEE ALSO
 

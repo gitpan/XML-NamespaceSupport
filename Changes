@@ -1,6 +1,9 @@
 
 Revision history for XML::NamespaceSupport:
 
+1.08  thu 20020822 14:01
+    - "fix" it to follow the latest XML NS Errata barfing around
+
 1.07  mon 20020527 14:41
     - added undeclare_prefix() thanks to Christian Glahn.
 
