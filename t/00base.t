@@ -1,18 +1,26 @@
 use strict;
 use Test;
 use XML::NamespaceSupport;
-BEGIN {plan tests => 45}
+use constant FATALS         => 0; # root object
+use constant NSMAP          => 1;
+use constant UNKNOWN_PREF   => 2;
+use constant AUTO_PREFIX    => 3;
+use constant DEFAULT        => 0; # maps
+use constant PREFIX_MAP     => 1;
+use constant DECLARATIONS   => 2;
+
+BEGIN {plan tests => 46}
 
 # initial prefixes and URIs
-my $ns = XML::NamespaceSupport->new({ xmlns => 1, fatal_errors => 0 });
-ok(@{$ns->{nsmap}} == 1);                                                                       # 1
+my $ns = XML::NamespaceSupport->new({ xmlns => 1, fatal_errors => 0, auto_prefix => 1 });
+ok(@{$ns->[NSMAP]} == 1);                                                                       # 1
 ok(join(' ', sort $ns->get_prefixes), 'xml xmlns');
 ok(not defined $ns->get_uri(''));
 ok($ns->get_uri('xmlns'), 'http://www.w3.org/2000/xmlns/');
 
 # new context
 $ns->push_context;
-ok(@{$ns->{nsmap}} == 2);
+ok(@{$ns->[NSMAP]} == 2);
 ok(join(' ', sort $ns->get_declared_prefixes), '');
 ok(join(' ', sort $ns->get_prefixes), 'xml xmlns');
 
@@ -43,7 +51,7 @@ ok(join(' ', $ns->process_attribute_name('xml:att1')), 'http://www.w3.org/XML/19
 
 # new context and undeclaring default ns
 $ns->push_context;
-ok(@{$ns->{nsmap}} == 3);
+ok(@{$ns->[NSMAP]} == 3);
 $ns->declare_prefix('', '');
 eval {$ns->declare_prefix('icl', '')};
 ok($@);
@@ -55,7 +63,7 @@ ok(join(' ', sort $ns->get_prefixes('http://www.icl.com')), 'icl icl2');        
 $ns->push_context;
 $ns->declare_prefix('perl', 'http://www.perl.com');
 $ns->declare_prefix('', 'http://www.java.com');
-$ns->{fatals} = 1; # go to strict mode
+$ns->[FATALS] = 1; # go to strict mode
 
 ok(join(' ', $ns->get_declared_prefixes), 'perl ');
 ok(join(' ', $ns->process_element_name('icl:el1')), 'http://www.icl.com icl el1');
@@ -73,12 +81,12 @@ ok(join(' ', $ns->process_attribute_name('perl:att1')), 'http://www.perl.com per
 # previous prefixes have gone
 $ns->pop_context;
 $ns->pop_context;
-ok(@{$ns->{nsmap}} == 2);                                                               # 40
+ok(@{$ns->[NSMAP]} == 2);                                                               # 40
 ok(join(' ', sort $ns->get_prefixes('http://www.icl.com')), 'icl icl2');
 
 # only initial prefixes remain
 $ns->pop_context;
-ok(@{$ns->{nsmap}} == 1);
+ok(@{$ns->[NSMAP]} == 1);
 ok(join(' ', sort $ns->get_prefixes), 'xml xmlns');
 
 # reset object for re-use
@@ -86,5 +94,12 @@ $ns->push_context;
 $ns->declare_prefix('perl', 'http://www.perl.com');
 $ns->declare_prefix('', 'http://www.java.com');
 $ns->reset;
-ok(@{$ns->{nsmap}} == 1);
+ok(@{$ns->[NSMAP]} == 1);
 ok(join(' ', sort $ns->get_prefixes), 'xml xmlns');
+
+# undef prefix test
+$ns->push_context;
+$ns->declare_prefix(undef, 'http://berjon.com');
+ok(defined $ns->get_prefix('http://berjon.com'));
+
+

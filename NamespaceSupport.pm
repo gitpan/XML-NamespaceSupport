@@ -2,16 +2,20 @@
 ###
 # XML::NamespaceSupport - a simple generic namespace processor
 # Robin Berjon <robin@knowscape.com>
-# 07/10/2001 - v0.03 added Clarkian notation parsing
-# 20/09/2001 - v0.02 (w/ lots from Duncan Cameron)
-# 16/09/2001 - v0.01
 ###
 
 package XML::NamespaceSupport;
 use strict;
+use constant FATALS         => 0; # root object
+use constant NSMAP          => 1;
+use constant UNKNOWN_PREF   => 2;
+use constant AUTO_PREFIX    => 3;
+use constant DEFAULT        => 0; # maps
+use constant PREFIX_MAP     => 1;
+use constant DECLARATIONS   => 2;
 
 use vars qw($VERSION $NS_XMLNS $NS_XML);
-$VERSION    = '1.04';
+$VERSION    = '1.06';
 $NS_XMLNS   = 'http://www.w3.org/2000/xmlns/';
 $NS_XML     = 'http://www.w3.org/XML/1998/namespace';
 
@@ -25,17 +29,19 @@ $NS_XML     = 'http://www.w3.org/XML/1998/namespace';
 sub new {
     my $class   = ref($_[0]) ? ref(shift) : shift;
     my $options = shift;
-    my $self = {
-                fatals  => 1,
-                nsmap   => [{
-                              default       => undef,
-                              prefix_map    => { xml => $NS_XML },
-                              declarations  => undef,
-                           }]
-               };
-    $self->{nsmap}->[0]->{prefix_map}->{xmlns} = $NS_XMLNS if $options->{xmlns};
-    $self->{fatals} = $options->{fatal_errors} if defined $options->{fatal_errors};
-    $self->{unknown_prefix} = 'aaa';
+    my $self = [
+                1, # FATALS
+                [[ # NSMAP
+                  undef,              # DEFAULT
+                  { xml => $NS_XML }, # PREFIX_MAP
+                  undef,              # DECLARATIONS
+                ]],
+                'aaa', # UNKNOWN_PREF
+                0,     # AUTO_PREFIX
+               ];
+    $self->[NSMAP]->[0]->[PREFIX_MAP]->{xmlns} = $NS_XMLNS if $options->{xmlns};
+    $self->[FATALS] = $options->{fatal_errors} if defined $options->{fatal_errors};
+    $self->[AUTO_PREFIX] = $options->{auto_prefix} if defined $options->{auto_prefix};
     return bless $self, $class;
 }
 #-------------------------------------------------------------------#
@@ -45,7 +51,7 @@ sub new {
 #-------------------------------------------------------------------#
 sub reset {
     my $self = shift;
-    $#{$self->{nsmap}} = 0;
+    $#{$self->[NSMAP]} = 0;
 }
 #-------------------------------------------------------------------#
 
@@ -54,11 +60,11 @@ sub reset {
 #-------------------------------------------------------------------#
 sub push_context {
     my $self = shift;
-    push @{$self->{nsmap}}, {
-                             default         => $self->{nsmap}->[-1]->{default},
-                             prefix_map      => { %{$self->{nsmap}->[-1]->{prefix_map}} },
-                             declarations    => [],
-                            };
+    push @{$self->[NSMAP]}, [
+                             $self->[NSMAP]->[-1]->[DEFAULT],
+                             { %{$self->[NSMAP]->[-1]->[PREFIX_MAP]} },
+                             [],
+                            ];
 }
 #-------------------------------------------------------------------#
 
@@ -67,8 +73,8 @@ sub push_context {
 #-------------------------------------------------------------------#
 sub pop_context {
     my $self = shift;
-    die 'Trying to pop context without push context' unless @{$self->{nsmap}} > 1;
-    pop @{$self->{nsmap}};
+    die 'Trying to pop context without push context' unless @{$self->[NSMAP]} > 1;
+    pop @{$self->[NSMAP]};
 }
 #-------------------------------------------------------------------#
 
@@ -80,23 +86,32 @@ sub declare_prefix {
     my $prefix  = shift;
     my $value   = shift;
 
-    warn "Prefix must not be undef in declare_prefix(). The emtpy prefix must be ''" unless defined $prefix;
-    return 0 if $prefix =~ /^xml/i;
+    warn <<'    EOWARN' unless defined $prefix or $self->[AUTO_PREFIX];
+    Prefix was undefined.
+    If you wish to set the default namespace, use the empty string ''.
+    If you wish to autogenerate prefixes, set the auto_prefix option
+    to a true value.
+    EOWARN
 
-    if ($prefix eq '') {
-        $self->{nsmap}->[-1]->{default} = $value;
+    return 0 if index(lc($prefix), 'xml') == 0;
+
+    if (defined $prefix and $prefix eq '') {
+        $self->[NSMAP]->[-1]->[DEFAULT] = $value;
     }
     else {
         die "Cannot undeclare prefix $prefix" if $value eq '';
-        if (not defined $prefix) {
+        if (not defined $prefix and $self->[AUTO_PREFIX]) {
             while (1) {
-                $prefix = $self->{unknown_prefix}++;
-                last if not exists $self->{nsmap}->[-1]->{prefix_map}->{$prefix};
+                $prefix = $self->[UNKNOWN_PREF]++;
+                last if not exists $self->[NSMAP]->[-1]->[PREFIX_MAP]->{$prefix};
             }
         }
-        $self->{nsmap}->[-1]->{prefix_map}->{$prefix} = $value;
+        elsif (not defined $prefix and not $self->[AUTO_PREFIX]) {
+            return 0;
+        }
+        $self->[NSMAP]->[-1]->[PREFIX_MAP]->{$prefix} = $value;
     }
-    push @{$self->{nsmap}->[-1]->{declarations}}, $prefix;
+    push @{$self->[NSMAP]->[-1]->[DECLARATIONS]}, $prefix;
     return 1;
 }
 #-------------------------------------------------------------------#
@@ -123,7 +138,7 @@ sub get_prefix {
     # we have to iterate over the whole hash here because if we don't
     # the iterator isn't reset and the next pass will fail
     my $pref;
-    while (my ($k, $v) = each %{$self->{nsmap}->[-1]->{prefix_map}}) {
+    while (my ($k, $v) = each %{$self->[NSMAP]->[-1]->[PREFIX_MAP]}) {
         $pref = $k if $v eq $uri;
     }
     return $pref;
@@ -137,8 +152,8 @@ sub get_prefixes {
     my $self    = shift;
     my $uri     = shift;
 
-    return keys %{$self->{nsmap}->[-1]->{prefix_map}} unless defined $uri;
-    return grep { $self->{nsmap}->[-1]->{prefix_map}->{$_} eq $uri } keys %{$self->{nsmap}->[-1]->{prefix_map}};
+    return keys %{$self->[NSMAP]->[-1]->[PREFIX_MAP]} unless defined $uri;
+    return grep { $self->[NSMAP]->[-1]->[PREFIX_MAP]->{$_} eq $uri } keys %{$self->[NSMAP]->[-1]->[PREFIX_MAP]};
 }
 #-------------------------------------------------------------------#
 
@@ -146,8 +161,7 @@ sub get_prefixes {
 # get_declared_prefixes() - get all prefixes declared in the last context
 #-------------------------------------------------------------------#
 sub get_declared_prefixes {
-    my $self = shift;
-    return @{$self->{nsmap}->[-1]->{declarations}};
+    return @{$_[0]->[NSMAP]->[-1]->[DECLARATIONS]};
 }
 #-------------------------------------------------------------------#
 
@@ -160,8 +174,8 @@ sub get_uri {
 
     warn "Prefix must not be undef in get_uri(). The emtpy prefix must be ''" unless defined $prefix;
 
-    return $self->{nsmap}->[-1]->{default} if $prefix eq '';
-    return $self->{nsmap}->[-1]->{prefix_map}->{$prefix} if exists $self->{nsmap}->[-1]->{prefix_map}->{$prefix};
+    return $self->[NSMAP]->[-1]->[DEFAULT] if $prefix eq '';
+    return $self->[NSMAP]->[-1]->[PREFIX_MAP]->{$prefix} if exists $self->[NSMAP]->[-1]->[PREFIX_MAP]->{$prefix};
     return undef;
 }
 #-------------------------------------------------------------------#
@@ -174,15 +188,12 @@ sub process_name {
     my $qname   = shift;
     my $aflag   = shift;
 
-    my ($ns, $lname);
-    eval {
-        ($ns, undef, $lname) = $self->_get_ns_details($qname, $aflag);
-    };
-    if ($@) {
-        die $@ if $self->{fatals};
-        return undef;
+    if ($self->[FATALS]) {
+        return( ($self->_get_ns_details($qname, $aflag))[0,2], $qname );
     }
-    return ($ns, $lname, $qname);
+    else {
+        eval { return( ($self->_get_ns_details($qname, $aflag))[0,2], $qname ); }
+    }
 }
 #-------------------------------------------------------------------#
 
@@ -193,15 +204,12 @@ sub process_element_name {
     my $self    = shift;
     my $qname   = shift;
 
-    my ($ns, $prefix, $lname);
-    eval {
-        ($ns, $prefix, $lname) = $self->_get_ns_details($qname, 0);
-    };
-    if ($@) {
-        die $@ if $self->{fatals};
-        return undef;
+    if ($self->[FATALS]) {
+        return $self->_get_ns_details($qname, 0);
     }
-    return ($ns, $prefix, $lname);
+    else {
+        eval { return $self->_get_ns_details($qname, 0); }
+    }
 }
 #-------------------------------------------------------------------#
 
@@ -213,15 +221,12 @@ sub process_attribute_name {
     my $self    = shift;
     my $qname   = shift;
 
-    my ($ns, $prefix, $lname);
-    eval {
-        ($ns, $prefix, $lname) = $self->_get_ns_details($qname, 1);
-    };
-    if ($@) {
-        die $@ if $self->{fatals};
-        return undef;
+    if ($self->[FATALS]) {
+        return $self->_get_ns_details($qname, 1);
     }
-    return ($ns, $prefix, $lname);
+    else {
+        eval { return $self->_get_ns_details($qname, 1); }
+    }
 }
 #-------------------------------------------------------------------#
 
@@ -241,19 +246,20 @@ sub _get_ns_details {
                                     < 3 or die "Invalid QName: $qname";
 
     # no prefix
+    my $cur_map = $self->[NSMAP]->[-1];
     if (not defined($tmp_lname)) {
         $prefix = undef;
         $lname = $qname;
         # attr don't have a default namespace
-        $ns = ($aflag) ? undef : $self->{nsmap}->[-1]->{default};
+        $ns = ($aflag) ? undef : $cur_map->[DEFAULT];
     }
 
     # prefix
     else {
-        if (exists $self->{nsmap}->[-1]->{prefix_map}->{$tmp_prefix}) {
+        if (exists $cur_map->[PREFIX_MAP]->{$tmp_prefix}) {
             $prefix = $tmp_prefix;
             $lname  = $tmp_lname;
-            $ns     = $self->{nsmap}->[-1]->{prefix_map}->{$prefix}
+            $ns     = $cur_map->[PREFIX_MAP]->{$prefix}
         }
         else { # no ns -> lname == name, all rest undef
             die "Undeclared prefix: $tmp_prefix";
@@ -365,7 +371,7 @@ It adds a few perlisations where we thought it appropriate.
 
 A simple constructor.
 
-The options are C<xmlns> and C<fatal_errors>.
+The options are C<xmlns>, C<fatal_errors>, and C<auto_prefix>
 
 If C<xmlns> is turned on (it is off by default) the mapping from the
 xmlns prefix to the URI defined for it in DOM level 2 is added to the
@@ -375,6 +381,12 @@ prefix mapping).
 If C<fatal_errors> is turned off (it is on by default) a number of
 validity errors will simply be flagged as failures, instead of
 die()ing.
+
+If C<auto_prefix> is turned on (it is off by default) when one
+provides a prefix of C<undef> to C<declare_prefix> it will generate a
+random prefix mapped to that namespace. Otherwise an undef prefix will
+trigger a warning (you should probably know what you're doing if you
+turn this option on).
 
 =item * $nsup->push_context
 
@@ -388,13 +400,17 @@ one. It will die() if you try to pop more than you have pushed.
 
 =item * $nsup->declare_prefix($prefix, $uri)
 
-Declares a mapping of $prefix to $uri, at the current level. Note that
-if you declare a prefix mapping in which $prefix is undef(), you will
-get an automatic prefix selected for you. This is useful when you deal
-with code that hasn't kept prefixes around and need to reserialize the
-nodes. It also means that if you want to set the default namespace (ie
-with an empty prefix) you must use the empty string instead of undef.
-This behaviour is consistent with the SAX 2.0 specification.
+Declares a mapping of $prefix to $uri, at the current level.
+
+Note that with C<auto_prefix> turned on, if you declare a prefix
+mapping in which $prefix is undef(), you will get an automatic prefix
+selected for you. If it is off you will get a warning.
+
+This is useful when you deal with code that hasn't kept prefixes around
+and need to reserialize the nodes. It also means that if you want to
+set the default namespace (ie with an empty prefix) you must use the
+empty string instead of undef. This behaviour is consistent with the
+SAX 2.0 specification.
 
 =item * $nsup->declare_prefixes(%prefixes2uris)
 
