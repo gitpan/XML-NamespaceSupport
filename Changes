@@ -1,0 +1,22 @@
+
+Revision history for XML::NamespaceSupport:
+
+0.01  sun 20010916 21:20:20
+	- original version
+
+0.02  thu 20010920 16:39:31
+	- integrated a number of fixes and suggestions from the perl-xml
+	list (thanks to in no particular order and with possible
+	accidental omissions: Eric Bohlman, Ken MacLeod, Bart Schuller,
+	Andrew Pimlott, Tim Bray, Adam Turoff, and Duncan Cameron).
+	- integrated Duncan Cameron's version:
+		. changed name to XML::NamespaceSupport to mirror the SAX2
+		spec
+		. added all the interfaces corresponding to that class
+		. added a few tests
+	- fixed a few bugs
+	- added aliases for people that prefer Java-style names
+	- updated docs
+	- included and updated tests that were unreleased in the first
+	version
+
