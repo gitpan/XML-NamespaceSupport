@@ -1,8 +1,9 @@
 
 Revision history for XML::NamespaceSupport:
 
-0.01  sun 20010916 21:20:20
-	- original version
+0.02 - 1.00  wed 20011128 23:37:41
+	- misc fixes in the docs and parts of the code
+	- added the uri_unknown_prefix option (Matt Sergeant)
 
 0.02  thu 20010920 16:39:31
 	- integrated a number of fixes and suggestions from the perl-xml
@@ -19,4 +20,7 @@ Revision history for XML::NamespaceSupport:
 	- updated docs
 	- included and updated tests that were unreleased in the first
 	version
+
+0.01  sun 20010916 21:20:20
+	- original version
 

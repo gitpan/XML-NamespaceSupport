@@ -2,17 +2,19 @@
 ###
 # XML::NamespaceSupport - a simple generic namespace processor
 # Robin Berjon <robin@knowscape.com>
+# 07/10/2001 - v0.03 added Clarkian notation parsing
 # 20/09/2001 - v0.02 (w/ lots from Duncan Cameron)
-# 16/09/2001 - v.0.01
+# 16/09/2001 - v0.01
 ###
 
 package XML::NamespaceSupport;
 use strict;
 
 use vars qw($VERSION);
-$VERSION = '0.03';
+$VERSION = '1.00';
 use constant NS_XMLNS   => 'http://www.w3.org/2000/xmlns/';
 use constant NS_XML     => 'http://www.w3.org/XML/1998/namespace';
+
 
 
 #-------------------------------------------------------------------#
@@ -30,7 +32,8 @@ sub new {
                            }]
                };
     $self->{nsmap}->[0]->{prefix_map}->{xmlns} = NS_XMLNS if $options->{xmlns};
-    $self->{fatals} = $options->{fatal_errors} if defined $options->{fatal_errors} ;
+    $self->{fatals} = $options->{fatal_errors} if defined $options->{fatal_errors};
+    $self->{unknown_prefix} = 'aaa' if $options->{uri_unknown_prefix};
     return bless $self, $class;
 }
 #-------------------------------------------------------------------#
@@ -145,7 +148,7 @@ sub get_uri {
 
     return $self->{nsmap}->[-1]->{default} if $prefix eq '';
     return $self->{nsmap}->[-1]->{prefix_map}->{$prefix} if exists $self->{nsmap}->[-1]->{prefix_map}->{$prefix};
-    return undef;
+    return $self->{unknown_prefix} ? $self->{unknown_prefix}++ : undef;
 }
 #-------------------------------------------------------------------#
 
@@ -348,7 +351,7 @@ It adds a few perlisations where we thought it appropriate.
 
 A simple constructor.
 
-The options are C<xmlns> and C<fatal_errors>.
+The options are C<xmlns>, C<fatal_errors>, and C<uri_unknown_prefix>.
 
 If C<xmlns> is turned on (it is off by default) the mapping from the
 xmlns prefix to the URI defined for it in DOM level 2 is added to the
@@ -358,6 +361,10 @@ prefix mapping).
 If C<fatal_errors> is turned off (it is on by default) a number of
 validity errors will simply be flagged as failures, instead of
 die()ing.
+
+If C<uri_unknown_prefix> is tuned on (it is off by default) then
+get_uri will return a specific string for unknown prefixes, instead
+of undef.
 
 =item * $nsup->push_context
 
