@@ -1,7 +1,15 @@
 
 Revision history for XML::NamespaceSupport:
 
-1.03  wed 20020123 19:04:90
+1.04  fri 20020125 18:34:39
+    - fixed a very nasty bug reported by Grant McLean. getPrefix() had 
+    an immediate return() inside of a while() that iterated over the 
+    declared prefixes using each(). Because of that, calling 
+    getPrefix() twice in a row would return nothing the next time 
+    because the each() internal iterator wasn't reset. Sometimes Perl
+    bites.
+
+1.03  wed 20020123 19:04:19
     - a few warnings were confusing people when they wrongly used undef
     prefixes. The warning has now been made explicit (as it reveals a
     problem in the calling code).

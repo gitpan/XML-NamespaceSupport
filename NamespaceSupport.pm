@@ -11,7 +11,7 @@ package XML::NamespaceSupport;
 use strict;
 
 use vars qw($VERSION $NS_XMLNS $NS_XML);
-$VERSION    = '1.03';
+$VERSION    = '1.04';
 $NS_XMLNS   = 'http://www.w3.org/2000/xmlns/';
 $NS_XML     = 'http://www.w3.org/XML/1998/namespace';
 
@@ -120,10 +120,13 @@ sub get_prefix {
     my $self    = shift;
     my $uri     = shift;
 
+    # we have to iterate over the whole hash here because if we don't
+    # the iterator isn't reset and the next pass will fail
+    my $pref;
     while (my ($k, $v) = each %{$self->{nsmap}->[-1]->{prefix_map}}) {
-        return $k if $v eq $uri;
+        $pref = $k if $v eq $uri;
     }
-    return undef;
+    return $pref;
 }
 #-------------------------------------------------------------------#
 
