@@ -2,9 +2,6 @@
 ###
 # XML::NamespaceSupport - a simple generic namespace processor
 # Robin Berjon <robin@knowscape.com>
-# 07/10/2001 - v0.03 added Clarkian notation parsing
-# 20/09/2001 - v0.02 (w/ lots from Duncan Cameron)
-# 16/09/2001 - v0.01
 ###
 
 package XML::NamespaceSupport;
@@ -18,7 +15,7 @@ use constant PREFIX_MAP     => 1;
 use constant DECLARATIONS   => 2;
 
 use vars qw($VERSION $NS_XMLNS $NS_XML);
-$VERSION    = '1.05';
+$VERSION    = '1.07';
 $NS_XMLNS   = 'http://www.w3.org/2000/xmlns/';
 $NS_XML     = 'http://www.w3.org/XML/1998/namespace';
 
@@ -128,6 +125,25 @@ sub declare_prefixes {
     while (my ($k,$v) = each %prefixes) {
         $self->declare_prefix($k,$v);
     }
+}
+#-------------------------------------------------------------------#
+
+#-------------------------------------------------------------------#
+# undeclare_prefix
+#-------------------------------------------------------------------#
+sub undeclare_prefix {
+    my $self   = shift;
+    my $prefix = shift;
+    return unless not defined $prefix or $prefix eq '';
+    return unless exists $self->[NSMAP]->[-1]->[PREFIX_MAP]->{$prefix};
+
+    my ( $tfix ) = grep { $_ eq $prefix } @{$self->[NSMAP]->[-1]->[DECLARATIONS]};
+    if ( not defined $tfix ) {
+        die "prefix $prefix not declared in this context\n";
+    }
+
+    @{$self->[NSMAP]->[-1]->[DECLARATIONS]} = grep { $_ ne $prefix } @{$self->[NSMAP]->[-1]->[DECLARATIONS]};
+    delete $self->[NSMAP]->[-1]->[PREFIX_MAP]->{$prefix};
 }
 #-------------------------------------------------------------------#
 
@@ -300,6 +316,7 @@ sub parse_jclark_notation {
 *XML::NamespaceSupport::processElementName   = \&process_element_name;
 *XML::NamespaceSupport::processAttributeName = \&process_attribute_name;
 *XML::NamespaceSupport::parseJClarkNotation  = \&parse_jclark_notation;
+*XML::NamespaceSupport::undeclarePrefix      = \&undeclare_prefix;
 #-------------------------------------------------------------------#
 
 
@@ -453,6 +470,14 @@ If the prefix is not declared, or if the name is not valid, it'll
 either die or return undef depending on the current setting of
 C<fatal_errors>.
 
+=item * $nsup->undeclare_prefix($prefix);
+
+Removes a namespace prefix from the current context. This function may
+be used in SAX's end_prefix_mapping when there is fear that a namespace 
+declaration might be available outside their scope (which shouldn't 
+normally happen, but you never know ;). This may be needed in order to
+properly support Namespace 1.1.
+
 =item * $nsup->process_element_name($qname)
 
 Given a qualified name, it returns a namespace URI, prefix, and local
@@ -494,6 +519,8 @@ interchangeably. Here is the mapping:
   processName               process_name
   processElementName        process_element_name
   processAttributeName      process_attribute_name
+  parseJClarkNotation       parse_jclark_notation
+  undeclarePrefix           undeclare_prefix
 
 =head1 VARIABLES
 
@@ -535,3 +562,4 @@ terms as Perl itself.
 XML::Parser::PerlSAX
 
 =cut
+

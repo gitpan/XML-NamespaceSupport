@@ -1,6 +1,12 @@
 
 Revision history for XML::NamespaceSupport:
 
+1.07  mon 20020527 14:41
+    - added undeclare_prefix() thanks to Christian Glahn.
+
+1.06  tue 20020514 17:36
+    - CPAN problem, had to change the version
+
 1.05  fri 20020404 14:00
     - added a number of rather good speedups by converting a lot of
     the code to use arrays instead of hashes. More of the same kind
