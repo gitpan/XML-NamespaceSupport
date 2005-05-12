@@ -4,3 +4,4 @@ MANIFEST
 NamespaceSupport.pm
 t/00base.t
 README
+META.yml                                 Module meta-data (added by MakeMaker)

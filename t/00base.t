@@ -5,11 +5,12 @@ use constant FATALS         => 0; # root object
 use constant NSMAP          => 1;
 use constant UNKNOWN_PREF   => 2;
 use constant AUTO_PREFIX    => 3;
+use constant XMLNS_11       => 4;
 use constant DEFAULT        => 0; # maps
 use constant PREFIX_MAP     => 1;
 use constant DECLARATIONS   => 2;
 
-BEGIN {plan tests => 46}
+BEGIN {plan tests => 48}
 
 # initial prefixes and URIs
 my $ns = XML::NamespaceSupport->new({ xmlns => 1, fatal_errors => 0, auto_prefix => 1 });
@@ -52,9 +53,12 @@ ok(join(' ', $ns->process_attribute_name('xml:att1')), 'http://www.w3.org/XML/19
 # new context and undeclaring default ns
 $ns->push_context;
 ok(@{$ns->[NSMAP]} == 3);
-$ns->declare_prefix('', '');
+ok($ns->declare_prefix('', ''));
+$ns->[XMLNS_11] = 0;
 eval {$ns->declare_prefix('icl', '')};
 ok($@);
+$ns->[XMLNS_11] = 1;
+ok($ns->declare_prefix('iclX', ''));
 
 ok(join(' ', map {$_ || 'undef'} $ns->process_element_name('')), 'undef undef undef');
 ok(join(' ', sort $ns->get_prefixes('http://www.icl.com')), 'icl icl2');                    # 30
